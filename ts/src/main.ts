@@ -24,18 +24,26 @@ async function init(){
         <h2>${movie.title}</h2>
         <p>Director: ${movie.director}</p>
         <p>Year: ${movie.year}</p>
-        <button class="delete-movie" data-id="${movie.id}">Delete</button>
-        <button class="edit-movie" data-id="${movie.id}">Edit</button>
+        <button class="delete-movie"onclick="deleteMovie" data-id="${movie.id}">Delete</button>
+        <button class="edit-movie" onclick ="editMovie" data-id="${movie.id}">Edit</button>
       </div>
+
+      <div class="edit-form" id="edit-${movie.id}" style="display: none;">
+              <input type="text" class="edit-title" value="${movie.title}" placeholder="Movie Title">
+              <input type="text" class="edit-director" value="${movie.director}" placeholder="Director">
+              <input type="number" class="edit-year" value="${movie.year}" placeholder="Year">
+              <button onclick="saveMovie(${movie.id})">Save</button>
+              <button onclick="cancelEdit(${movie.id})">Cancel</button>
+          </div>
       `
     
   }).join('');
   }
 
   document.querySelector<HTMLButtonElement>('#add-movie')!.onclick = async () => {
-    const title = (document.querySelector<HTMLInputElement>('#movie-title')!).value;
-    const director = (document.querySelector<HTMLInputElement>('#movie-director')!).value;
-    const year = (document.querySelector<HTMLInputElement>('#movie-year')!).value;
+    const title = (document.querySelector('#movie-title') as HTMLInputElement).value;
+    const director = (document.querySelector ('#movie-director') as HTMLInputElement).value;
+    const year = parseInt((document.querySelector ('#movie-year') as HTMLInputElement).value);
 
     const movie = {
       title: title,
@@ -50,31 +58,59 @@ async function init(){
       popularity: 0,
       genres: []
     }
-
-    if (!title || !director || !year) {
-      alert("Please fill in all fields");
-      return;
-    }
     // Check if movie already exists
     if(title && director && year){
     await dbService.addMovie(movie);
     console.log("Movie added successfully");
     DisplayMovies();
     }
+    
+    // clear inputs
+    (document.querySelector('#title') as HTMLInputElement).value = '';
+    (document.querySelector('#director') as HTMLInputElement).value = '';
+    (document.querySelector('#year') as HTMLInputElement).value = '';
   }
 
 // Use event delegation for delete buttons
-document.querySelector('.card')!.addEventListener('click', async (event) => {
-  const target = event.target as HTMLElement;
-  if (target.classList.contains('delete-movie')) {
-    window.deleteMovie = async (id: number) => {
-      await dbService.deleteMovie(id);
-      console.log("Movie deleted successfully");
-      DisplayMovies();
+window.deleteMovie = async(id: number)=>{
+  await dbService.deleteMovie(id)
+  await DisplayMovies()
+}
+
+window.cancelEdit = (id: number) => {
+  const movieCard = document.querySelector(`#movie-${id} .movie-content`)! as HTMLElement;
+  const editForm = document.querySelector(`#edit-${id}`)! as HTMLElement;
+  movieCard.style.display = 'block';
+  editForm.style.display = 'none';
+};
+
+window.saveMovie = async (id: number) => {
+  const editForm = document.querySelector(`#edit-${id}`)!;
+  const title = (editForm.querySelector('.edit-title') as HTMLInputElement).value;
+  const director = (editForm.querySelector('.edit-director') as HTMLInputElement).value;
+  const year = parseInt((editForm.querySelector('.edit-year') as HTMLInputElement).value);
+
+  if (title && director && year) {
+      const movie = {
+      title: title,
+      director: director,
+      overview: "This is a sample overview",
+      year: year,
+      release_date: "upcoming",
+      poster_path: "https://static.hbo.com/game-of-thrones-1-1920x1080.jpg",
+      backdrop_path: "https://static.hbo.com/game-of-thrones-1-1920x1080.jpg",
+      vote_average: 0,
+      vote_count: 0,
+      popularity: 0,
+      genres: []
     }
-    }
-});
- 
+
+    await dbService.updateMovie(movie);
+    await DisplayMovies();
+  }
+};
+
+
   DisplayMovies();
 }
 
@@ -107,6 +143,8 @@ init().catch((error)=>{
 declare global {
   interface Window{
     deleteMovie: (id: number)=> Promise<void>;
-    editMovie: (id: number)=> Promise<void>;
+    editMovie: (id: number)=> void;
+    cancelEdit: (id: number) => void;
+    saveMovie: (id: number) => void;
   }
 }
